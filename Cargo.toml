@@ -1,0 +1,20 @@
+[package]
+name = "rlwe-encryption"
+version = "0.1.0"
+authors = ["AlvinHon <alvin.cpp@gmail.com>"]
+edition = "2021"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/AlvinHon/poly-ring"
+description = "Lattice-based encryption using polynomial ring based on hardness of LWE problem"
+
+
+[lib]
+name = "rlwe_encryption"
+path = "src/lib.rs"
+
+[dependencies]
+num = "0.4"
+poly-ring-xnp1 = {git="https://github.com/AlvinHon/poly-ring"}
+rand = "0.8"
+
