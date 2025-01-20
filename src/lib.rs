@@ -6,14 +6,18 @@ use poly_ring_xnp1::Polynomial;
 use rand::{distributions::uniform::SampleUniform, Rng};
 use std::ops::{Add, Mul, Neg, Sub};
 
-/// Implements a finite field with prime modulus q.
+/// Implements a finite field over integers with prime modulus q.
 ///
 /// The value of `Q` and `B` must be carefully chosen in order to make it work.
 /// The parameters should satisfy the following condition:
 ///
 /// 2N * B^2 + B < Q/4
 ///
-/// where N is the degree of the polynomial (see the `key_gen` method).
+/// where N - 1 is the degree of the polynomial (see the `key_gen` method).
+///
+/// Please note the lower layer of arithmetics relies on the implementation of
+/// [std::ops] for the type `I`. The overflow behavior is not handled in this
+/// library.
 pub trait IntField {
     type I: Integer + Signed + Clone + SampleUniform;
     /// The prime modulus q.
@@ -133,8 +137,7 @@ where
 
 #[inline]
 fn rand_polynomial<T: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomial<T::I, N> {
-    let mut bound = T::Q;
-    bound.dec();
+    let bound = T::Q / (T::I::one() + T::I::one());
     rand_polynomial_within(rng, bound)
 }
 
