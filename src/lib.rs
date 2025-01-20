@@ -53,97 +53,97 @@ pub struct EncryptKey<Zq: IntField, const N: usize> {
     pub(crate) t: Polynomial<Zq::I, N>,
 }
 
-impl<T: IntField, const N: usize> EncryptKey<T, N> {
+impl<Zq: IntField, const N: usize> EncryptKey<Zq, N> {
     /// Encrypts a message `m` using the public key.
     ///
     /// ## Safty
     /// Message `m` must be a vector of integers in {0, 1}, i.e. binary message.
     /// and the length of the message must be less than or equal to `N`.
-    pub fn encrypt(&self, rng: &mut impl Rng, m: Vec<T::I>) -> CipherText<T, N>
+    pub fn encrypt(&self, rng: &mut impl Rng, m: Vec<Zq::I>) -> CipherText<Zq, N>
     where
-        for<'a> &'a T::I: Add<Output = T::I> + Mul<Output = T::I> + Sub<Output = T::I>,
+        for<'a> &'a Zq::I: Add<Output = Zq::I> + Mul<Output = Zq::I> + Sub<Output = Zq::I>,
     {
         // Uncomment for checking the preconditions. Here commented for performance.
         // assert!(len <= N);
         // m.iter()
-        //     .for_each(|mi| assert!(mi == &T::I::zero() || mi == &T::I::one()));
+        //     .for_each(|mi| assert!(mi == &Zq::I::zero() || mi == &Zq::I::one()));
 
-        let r = small_polynomial::<T, N>(rng);
-        let e2 = small_polynomial::<T, N>(rng);
-        let e3 = small_polynomial::<T, N>(rng);
+        let r = small_polynomial::<Zq, N>(rng);
+        let e2 = small_polynomial::<Zq, N>(rng);
+        let e3 = small_polynomial::<Zq, N>(rng);
 
         // u = a * r + e2
         let u = {
-            let a_r = modulo_coefficients::<T, N>(self.a.clone() * r.clone());
-            modulo_coefficients::<T, N>(a_r + e2)
+            let a_r = modulo_coefficients::<Zq, N>(self.a.clone() * r.clone());
+            modulo_coefficients::<Zq, N>(a_r + e2)
         };
 
         let q_div_2_m = {
             let tmp = Polynomial::<_, N>::from_coeffs(m);
-            scale_coefficients::<T, N>(tmp) // = [q/2] m
+            scale_coefficients::<Zq, N>(tmp) // = [q/2] m
         };
 
         // v = t * r + e3 + [q/2] m
         let v = {
-            let t_r = modulo_coefficients::<T, N>(self.t.clone() * r.clone());
-            let t_r_e3 = modulo_coefficients::<T, N>(t_r + e3);
-            modulo_coefficients::<T, N>(t_r_e3 + q_div_2_m)
+            let t_r = modulo_coefficients::<Zq, N>(self.t.clone() * r.clone());
+            let t_r_e3 = modulo_coefficients::<Zq, N>(t_r + e3);
+            modulo_coefficients::<Zq, N>(t_r_e3 + q_div_2_m)
         };
 
         CipherText { u, v }
     }
 }
 
-pub struct DecryptKey<T: IntField, const N: usize> {
-    pub(crate) s: Polynomial<T::I, N>,
+pub struct DecryptKey<Zq: IntField, const N: usize> {
+    pub(crate) s: Polynomial<Zq::I, N>,
 }
 
-impl<T: IntField, const N: usize> DecryptKey<T, N> {
-    pub fn decrypt(&self, c: CipherText<T, N>) -> Vec<T::I>
+impl<Zq: IntField, const N: usize> DecryptKey<Zq, N> {
+    pub fn decrypt(&self, c: CipherText<Zq, N>) -> Vec<Zq::I>
     where
-        for<'a> &'a T::I:
-            Add<Output = T::I> + Mul<Output = T::I> + Sub<Output = T::I> + Neg<Output = T::I>,
+        for<'a> &'a Zq::I:
+            Add<Output = Zq::I> + Mul<Output = Zq::I> + Sub<Output = Zq::I> + Neg<Output = Zq::I>,
     {
         // m = v - u * s
         let m = {
-            let u_s = modulo_coefficients::<T, N>(c.u.clone() * self.s.clone());
-            modulo_coefficients::<T, N>(c.v.clone() - u_s)
+            let u_s = modulo_coefficients::<Zq, N>(c.u.clone() * self.s.clone());
+            modulo_coefficients::<Zq, N>(c.v.clone() - u_s)
         };
 
-        let mb = round_coefficients::<T, N>(m);
+        let mb = round_coefficients::<Zq, N>(m);
 
         mb.iter().cloned().collect()
     }
 }
 
-pub fn key_gen<T: IntField, const N: usize>(
+pub fn key_gen<Zq: IntField, const N: usize>(
     rng: &mut impl Rng,
-) -> (EncryptKey<T, N>, DecryptKey<T, N>)
+) -> (EncryptKey<Zq, N>, DecryptKey<Zq, N>)
 where
-    for<'a> &'a T::I: Add<Output = T::I> + Mul<Output = T::I> + Sub<Output = T::I>,
+    for<'a> &'a Zq::I: Add<Output = Zq::I> + Mul<Output = Zq::I> + Sub<Output = Zq::I>,
 {
-    let a = rand_polynomial::<T, N>(rng);
-    let s = small_polynomial::<T, N>(rng);
-    let e = small_polynomial::<T, N>(rng);
+    let a = rand_polynomial::<Zq, N>(rng);
+    let s = small_polynomial::<Zq, N>(rng);
+    let e = small_polynomial::<Zq, N>(rng);
 
     // t = a * s + e
     let t = {
-        let a_s = modulo_coefficients::<T, N>(a.clone() * s.clone());
-        modulo_coefficients::<T, N>(a_s + e)
+        let a_s = modulo_coefficients::<Zq, N>(a.clone() * s.clone());
+        modulo_coefficients::<Zq, N>(a_s + e)
     };
 
     (EncryptKey { a, t }, DecryptKey { s })
 }
 
 #[inline]
-fn rand_polynomial<T: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomial<T::I, N> {
-    let bound = T::Q / (T::I::one() + T::I::one());
+fn rand_polynomial<Zq: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomial<Zq::I, N> {
+    let bound = Zq::Q / (Zq::I::one() + Zq::I::one());
     rand_polynomial_within(rng, bound)
 }
 
 #[inline]
-fn small_polynomial<T: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomial<T::I, N> {
-    rand_polynomial_within(rng, T::B)
+fn small_polynomial<Zq: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomial<Zq::I, N> {
+    rand_polynomial_within(rng, Zq::B)
 }
 
 /// Returns a random polynomial with coefficients in the range `[-bound, bound]`.
@@ -166,24 +166,28 @@ where
 }
 
 /// Multiplies each coefficient of the polynomial with the closest integer to q/2.
-fn scale_coefficients<T: IntField, const N: usize>(p: Polynomial<T::I, N>) -> Polynomial<T::I, N> {
-    let q_div_2 = closest_integer_div_two(T::Q);
+fn scale_coefficients<Zq: IntField, const N: usize>(
+    p: Polynomial<Zq::I, N>,
+) -> Polynomial<Zq::I, N> {
+    let q_div_2 = closest_integer_div_two(Zq::Q);
     let coeffs = p.iter().map(|c| q_div_2.clone() * c.clone()).collect();
     Polynomial::new(coeffs)
 }
 
 /// Converts each coefficient of the polynomial to either 0 or 1 by checking whether it
 /// is closer to 0 or q/2.
-fn round_coefficients<T: IntField, const N: usize>(p: Polynomial<T::I, N>) -> Polynomial<T::I, N> {
-    let two = T::I::one() + T::I::one();
-    let q_div_4 = closest_integer_div_two(T::Q) / two;
+fn round_coefficients<Zq: IntField, const N: usize>(
+    p: Polynomial<Zq::I, N>,
+) -> Polynomial<Zq::I, N> {
+    let two = Zq::I::one() + Zq::I::one();
+    let q_div_4 = closest_integer_div_two(Zq::Q) / two;
     let coeffs = p
         .iter()
         .map(|c| {
             if c.abs().gt(&q_div_4) {
-                T::I::one()
+                Zq::I::one()
             } else {
-                T::I::zero()
+                Zq::I::zero()
             }
         })
         .collect();
@@ -192,8 +196,10 @@ fn round_coefficients<T: IntField, const N: usize>(p: Polynomial<T::I, N>) -> Po
 
 /// Applies modulo q to each coefficient of the polynomial.
 #[inline]
-fn modulo_coefficients<T: IntField, const N: usize>(p: Polynomial<T::I, N>) -> Polynomial<T::I, N> {
-    Polynomial::new(p.iter().map(T::modulo).collect())
+fn modulo_coefficients<Zq: IntField, const N: usize>(
+    p: Polynomial<Zq::I, N>,
+) -> Polynomial<Zq::I, N> {
+    Polynomial::new(p.iter().map(Zq::modulo).collect())
 }
 
 /// Computes [x/2], the closest integer to x/2 with ties being broken upwards
@@ -214,7 +220,7 @@ mod tests {
     impl IntField for ZqI32 {
         type I = i32;
         const Q: i32 = 8383489; // a prime number
-        const B: i32 = 1;
+        const B: i32 = 16;
         fn modulo(x: &Self::I) -> Self::I {
             let a = x.rem_euclid(Self::Q);
             if a > Self::Q / 2 {
