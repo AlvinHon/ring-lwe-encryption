@@ -6,10 +6,22 @@ use poly_ring_xnp1::Polynomial;
 use rand::{distributions::uniform::SampleUniform, Rng};
 use std::ops::{Add, Mul, Neg, Sub};
 
+/// Implements a finite field with prime modulus q.
+///
+/// The value of `Q` and `B` must be carefully chosen in order to make it work.
+/// The parameters should satisfy the following condition:
+///
+/// 2N * B^2 + B < Q/4
+///
+/// where N is the degree of the polynomial (see the `key_gen` method).
 pub trait IntField {
     type I: Integer + Signed + Clone + SampleUniform;
     /// The prime modulus q.
     const Q: Self::I;
+    /// A positive integer, defines the boundary of the range of field element. This boundary determines
+    /// how "small" the coefficients are in the polynomials for randomness. Usually, the boundary is 1,
+    /// i.e. the coefficients are in range [-1, 1].
+    const B: Self::I;
     /// Implements the modulo operation on an integer to make it an element of the field.
     /// For example, applying modulo q if the the finite field consists only positive integers.
     ///
@@ -128,7 +140,7 @@ fn rand_polynomial<T: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomia
 
 #[inline]
 fn small_polynomial<T: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomial<T::I, N> {
-    rand_polynomial_within(rng, T::I::one())
+    rand_polynomial_within(rng, T::B)
 }
 
 /// Returns a random polynomial with coefficients in the range `[-bound, bound]`.
@@ -176,16 +188,15 @@ fn round_coefficients<T: IntField, const N: usize>(p: Polynomial<T::I, N>) -> Po
 }
 
 /// Applies modulo q to each coefficient of the polynomial.
+#[inline]
 fn modulo_coefficients<T: IntField, const N: usize>(p: Polynomial<T::I, N>) -> Polynomial<T::I, N> {
-    let coeffs = p.iter().map(T::modulo).collect();
-    Polynomial::new(coeffs)
+    Polynomial::new(p.iter().map(T::modulo).collect())
 }
 
 /// Computes [x/2], the closest integer to x/2 with ties being broken upwards
 #[inline]
 fn closest_integer_div_two<I: Integer + Clone>(x: I) -> I {
-    let two = I::one() + I::one();
-    x.div_ceil(&two)
+    x.div_ceil(&(I::one() + I::one()))
 }
 
 #[cfg(test)]
@@ -200,6 +211,7 @@ mod tests {
     impl IntField for ZqI32 {
         type I = i32;
         const Q: i32 = 8383489; // a prime number
+        const B: i32 = 1;
         fn modulo(x: &Self::I) -> Self::I {
             let a = x.rem_euclid(Self::Q);
             if a > Self::Q / 2 {
@@ -244,6 +256,7 @@ mod tests {
         impl IntField for ZqI32Q7 {
             type I = i32;
             const Q: i32 = 7;
+            const B: i32 = 1;
             fn modulo(x: &Self::I) -> Self::I {
                 let a = x.rem_euclid(Self::Q);
                 if a > Self::Q / 2 {
