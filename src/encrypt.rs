@@ -1,3 +1,5 @@
+//! Defines the encryption key and the encryption method.
+
 use poly_ring_xnp1::Polynomial;
 use rand::Rng;
 use std::ops::{Add, Mul, Sub};
@@ -8,6 +10,11 @@ use crate::{
     polynomial::{modulo_coefficients, scale_coefficients, small_polynomial},
 };
 
+/// The encryption key created by the key generation method.
+///
+/// The size of the key can be calculated as `2 * N * sizeof(I)`
+/// where `I` is the integer type of the field `Zq`.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EncryptKey<Zq: IntField, const N: usize> {
     pub(crate) a: Polynomial<Zq::I, N>,
     pub(crate) t: Polynomial<Zq::I, N>,
@@ -16,7 +23,7 @@ pub struct EncryptKey<Zq: IntField, const N: usize> {
 impl<Zq: IntField, const N: usize> EncryptKey<Zq, N> {
     /// Encrypts a message `m` using the public key.
     ///
-    /// ## Safty
+    /// ## Safety
     /// Message `m` must be a vector of integers in {0, 1}, i.e. binary message.
     /// and the length of the message must be less than or equal to `N`.
     pub fn encrypt(&self, rng: &mut impl Rng, m: Vec<Zq::I>) -> CipherText<Zq, N>

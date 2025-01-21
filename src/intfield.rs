@@ -1,3 +1,5 @@
+//! Defines the `IntField` trait for finite fields over integers.
+
 use num::{Integer, Signed};
 use rand::distributions::uniform::SampleUniform;
 
@@ -19,7 +21,7 @@ pub trait IntField {
     const Q: Self::I;
     /// A positive integer, defines the boundary of the range of field element. This boundary determines
     /// how "small" the coefficients are in the polynomials for randomness. Usually, the boundary is 1,
-    /// i.e. the coefficients are in range [-1, 1].
+    /// i.e. the coefficients are in range \[-1, 1].
     const B: Self::I;
     /// Implements the modulo operation on an integer to make it an element of the field.
     /// For example, applying modulo q if the the finite field consists only positive integers.
