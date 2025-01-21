@@ -129,12 +129,6 @@ mod tests {
 
     #[test]
     fn test_modulo_coefficients() {
-        let message_in_bits = "hello world"
-            .as_bytes()
-            .iter()
-            .flat_map(|&b| (0..8).map(move |i| ((b >> i) & 1) as i32))
-            .collect::<Vec<_>>();
-        println!("{:?} {}", message_in_bits, message_in_bits.len());
         // Let q = 7, the field elements are: -3,-2,-1,0,1,2,3
         // the operations should be eqvivalent to the positive integers field: 4,5,6,0,1,2,3
         // E.g. the result of multiplication of 1st element and 2nd element should be -3 * -2 = 6 = -1 mod 7,
