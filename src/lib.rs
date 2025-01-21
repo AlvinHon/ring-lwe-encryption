@@ -1,120 +1,18 @@
-use num::{
-    traits::{One, Zero},
-    Integer, Signed,
-};
-use poly_ring_xnp1::Polynomial;
-use rand::{distributions::uniform::SampleUniform, Rng};
-use std::ops::{Add, Mul, Neg, Sub};
+#![doc = include_str!("../README.md")]
 
-/// Implements a finite field over integers with prime modulus q.
-///
-/// The value of `Q` and `B` must be carefully chosen in order to make it work.
-/// The parameters should satisfy the following condition:
-///
-/// 2N * B^2 + B < Q/4
-///
-/// where N - 1 is the degree of the polynomial (see the `key_gen` method).
-///
-/// Please note the lower layer of arithmetics relies on the implementation of
-/// [std::ops] for the type `I`. The overflow behavior is not handled in this
-/// library.
-pub trait IntField {
-    type I: Integer + Signed + Clone + SampleUniform;
-    /// The prime modulus q.
-    const Q: Self::I;
-    /// A positive integer, defines the boundary of the range of field element. This boundary determines
-    /// how "small" the coefficients are in the polynomials for randomness. Usually, the boundary is 1,
-    /// i.e. the coefficients are in range [-1, 1].
-    const B: Self::I;
-    /// Implements the modulo operation on an integer to make it an element of the field.
-    /// For example, applying modulo q if the the finite field consists only positive integers.
-    ///
-    /// Example implementation using i32 as type `I`:
-    /// ```rust ignore
-    /// fn modulo(x: &Self::I) -> Self::I {
-    ///     let a = x.rem_euclid(Self::Q);
-    ///     if a > Self::Q / 2 {
-    ///         a - Self::Q
-    ///     } else {
-    ///         a
-    ///     }
-    /// }
-    /// ```
-    fn modulo(x: &Self::I) -> Self::I;
-}
+mod ciphertext;
+pub use ciphertext::CipherText;
+mod decrypt;
+pub use decrypt::DecryptKey;
+mod encrypt;
+pub use encrypt::EncryptKey;
+mod intfield;
+pub use intfield::IntField;
+pub(crate) mod polynomial;
 
-pub struct CipherText<Zq: IntField, const N: usize> {
-    pub(crate) u: Polynomial<Zq::I, N>,
-    pub(crate) v: Polynomial<Zq::I, N>,
-}
-
-pub struct EncryptKey<Zq: IntField, const N: usize> {
-    pub(crate) a: Polynomial<Zq::I, N>,
-    pub(crate) t: Polynomial<Zq::I, N>,
-}
-
-impl<Zq: IntField, const N: usize> EncryptKey<Zq, N> {
-    /// Encrypts a message `m` using the public key.
-    ///
-    /// ## Safty
-    /// Message `m` must be a vector of integers in {0, 1}, i.e. binary message.
-    /// and the length of the message must be less than or equal to `N`.
-    pub fn encrypt(&self, rng: &mut impl Rng, m: Vec<Zq::I>) -> CipherText<Zq, N>
-    where
-        for<'a> &'a Zq::I: Add<Output = Zq::I> + Mul<Output = Zq::I> + Sub<Output = Zq::I>,
-    {
-        // Uncomment for checking the preconditions. Here commented for performance.
-        // assert!(len <= N);
-        // m.iter()
-        //     .for_each(|mi| assert!(mi == &Zq::I::zero() || mi == &Zq::I::one()));
-
-        let r = small_polynomial::<Zq, N>(rng);
-        let e2 = small_polynomial::<Zq, N>(rng);
-        let e3 = small_polynomial::<Zq, N>(rng);
-
-        // u = a * r + e2
-        let u = {
-            let a_r = modulo_coefficients::<Zq, N>(self.a.clone() * r.clone());
-            modulo_coefficients::<Zq, N>(a_r + e2)
-        };
-
-        let q_div_2_m = {
-            let tmp = Polynomial::<_, N>::from_coeffs(m);
-            scale_coefficients::<Zq, N>(tmp) // = [q/2] m
-        };
-
-        // v = t * r + e3 + [q/2] m
-        let v = {
-            let t_r = modulo_coefficients::<Zq, N>(self.t.clone() * r.clone());
-            let t_r_e3 = modulo_coefficients::<Zq, N>(t_r + e3);
-            modulo_coefficients::<Zq, N>(t_r_e3 + q_div_2_m)
-        };
-
-        CipherText { u, v }
-    }
-}
-
-pub struct DecryptKey<Zq: IntField, const N: usize> {
-    pub(crate) s: Polynomial<Zq::I, N>,
-}
-
-impl<Zq: IntField, const N: usize> DecryptKey<Zq, N> {
-    pub fn decrypt(&self, c: CipherText<Zq, N>) -> Vec<Zq::I>
-    where
-        for<'a> &'a Zq::I:
-            Add<Output = Zq::I> + Mul<Output = Zq::I> + Sub<Output = Zq::I> + Neg<Output = Zq::I>,
-    {
-        // m = v - u * s
-        let m = {
-            let u_s = modulo_coefficients::<Zq, N>(c.u.clone() * self.s.clone());
-            modulo_coefficients::<Zq, N>(c.v.clone() - u_s)
-        };
-
-        let mb = round_coefficients::<Zq, N>(m);
-
-        mb.iter().cloned().collect()
-    }
-}
+use polynomial::{modulo_coefficients, rand_polynomial, small_polynomial};
+use rand::Rng;
+use std::ops::{Add, Mul, Sub};
 
 pub fn key_gen<Zq: IntField, const N: usize>(
     rng: &mut impl Rng,
@@ -133,79 +31,6 @@ where
     };
 
     (EncryptKey { a, t }, DecryptKey { s })
-}
-
-#[inline]
-fn rand_polynomial<Zq: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomial<Zq::I, N> {
-    let bound = Zq::Q / (Zq::I::one() + Zq::I::one());
-    rand_polynomial_within(rng, bound)
-}
-
-#[inline]
-fn small_polynomial<Zq: IntField, const N: usize>(rng: &mut impl Rng) -> Polynomial<Zq::I, N> {
-    rand_polynomial_within(rng, Zq::B)
-}
-
-/// Returns a random polynomial with coefficients in the range `[-bound, bound]`.
-///
-/// ## Safety
-/// **bound** must be positive.
-fn rand_polynomial_within<R: Rng, I, const N: usize>(rng: &mut R, bound: I) -> Polynomial<I, N>
-where
-    I: Integer + Clone + SampleUniform,
-{
-    let lower = I::zero() - bound.clone();
-
-    let mut upper = bound;
-    upper.inc(); // inclusive bound
-
-    let range = lower.clone()..upper.clone();
-    let coeffs = (0..N).map(|_| rng.gen_range(range.clone())).collect();
-
-    Polynomial::new(coeffs)
-}
-
-/// Multiplies each coefficient of the polynomial with the closest integer to q/2.
-fn scale_coefficients<Zq: IntField, const N: usize>(
-    p: Polynomial<Zq::I, N>,
-) -> Polynomial<Zq::I, N> {
-    let q_div_2 = closest_integer_div_two(Zq::Q);
-    let coeffs = p.iter().map(|c| q_div_2.clone() * c.clone()).collect();
-    Polynomial::new(coeffs)
-}
-
-/// Converts each coefficient of the polynomial to either 0 or 1 by checking whether it
-/// is closer to 0 or q/2.
-fn round_coefficients<Zq: IntField, const N: usize>(
-    p: Polynomial<Zq::I, N>,
-) -> Polynomial<Zq::I, N> {
-    let two = Zq::I::one() + Zq::I::one();
-    let q_div_4 = closest_integer_div_two(Zq::Q) / two;
-    let coeffs = p
-        .iter()
-        .map(|c| {
-            if c.abs().gt(&q_div_4) {
-                Zq::I::one()
-            } else {
-                Zq::I::zero()
-            }
-        })
-        .collect();
-    Polynomial::new(coeffs)
-}
-
-/// Applies modulo q to each coefficient of the polynomial.
-#[inline]
-fn modulo_coefficients<Zq: IntField, const N: usize>(
-    p: Polynomial<Zq::I, N>,
-) -> Polynomial<Zq::I, N> {
-    Polynomial::new(p.iter().map(Zq::modulo).collect())
-}
-
-/// Computes [x/2], the closest integer to x/2 with ties being broken upwards
-#[inline]
-fn closest_integer_div_two<I: Integer + Clone>(x: I) -> I {
-    x.div_ceil(&(I::one() + I::one()))
 }
 
 #[cfg(test)]
@@ -239,50 +64,5 @@ mod tests {
         let c = ek.encrypt(rng, m.clone());
         let d = sk.decrypt(c)[..m.len()].to_vec();
         assert_eq!(m, d);
-    }
-
-    #[test]
-    fn test_rand_polynomial() {
-        let rng = &mut rand::thread_rng();
-        let p = rand_polynomial_within::<_, i32, 512>(rng, 1);
-        p.iter().for_each(|c| assert!(*c >= -1 && *c <= 1));
-    }
-
-    #[test]
-    fn test_closest_integer_div_two() {
-        assert_eq!(closest_integer_div_two(1), 1);
-        assert_eq!(closest_integer_div_two(2), 1);
-        assert_eq!(closest_integer_div_two(3), 2);
-        assert_eq!(closest_integer_div_two(5), 3);
-        assert_eq!(closest_integer_div_two(7), 4);
-        assert_eq!(closest_integer_div_two(13), 7);
-    }
-
-    #[test]
-    fn test_modulo_coefficients() {
-        struct ZqI32Q7;
-
-        impl IntField for ZqI32Q7 {
-            type I = i32;
-            const Q: i32 = 7;
-            const B: i32 = 1;
-            fn modulo(x: &Self::I) -> Self::I {
-                let a = x.rem_euclid(Self::Q);
-                if a > Self::Q / 2 {
-                    a - Self::Q
-                } else {
-                    a
-                }
-            }
-        }
-
-        // Let q = 7, the field elements are: -3,-2,-1,0,1,2,3
-        // the operations should be eqvivalent to the positive integers field: 4,5,6,0,1,2,3
-        // E.g. the result of multiplication of 1st element and 2nd element should be -3 * -2 = 6 = -1 mod 7,
-        // i.e. the 3rd element in the field which is equivalent to 6 in the positive integers field.
-        let p = Polynomial::new(vec![-9, -6, 0, 6]);
-        let p = modulo_coefficients::<ZqI32Q7, 4>(p);
-        let coeffs = p.iter().cloned().collect::<Vec<i32>>();
-        assert_eq!(coeffs, [-2, 1, 0, -1]);
     }
 }
