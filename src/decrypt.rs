@@ -1,5 +1,6 @@
 //! Defines the decryption key and the decryption method.
 
+use num::traits::Zero;
 use poly_ring_xnp1::Polynomial;
 use std::ops::{Add, Mul, Neg, Sub};
 
@@ -37,6 +38,13 @@ impl<Zq: IntField, const N: usize> DecryptKey<Zq, N> {
 
         let mb = round_coefficients::<Zq, N>(m);
 
-        mb.iter().cloned().collect()
+        let mut ret = mb.iter().cloned().collect::<Vec<Zq::I>>();
+
+        // Pad with zeros if the length is less than N (due to coefficients trimming in round_coefficients)
+        if ret.len() < N {
+            ret.extend(std::iter::repeat(Zq::I::zero()).take(N - ret.len()));
+        }
+
+        ret
     }
 }
