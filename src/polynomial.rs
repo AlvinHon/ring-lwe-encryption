@@ -51,8 +51,9 @@ pub(crate) fn scale_coefficients<Zq: IntField, const N: usize>(
     p: Polynomial<Zq::I, N>,
 ) -> Polynomial<Zq::I, N> {
     let q_div_2 = closest_integer_div_two(Zq::Q);
-    let coeffs = p.iter().map(|c| q_div_2.clone() * c.clone()).collect();
-    Polynomial::new(coeffs)
+    let mut p = p;
+    p.coeffs_mut(|c| *c = q_div_2.clone() * c.clone());
+    p
 }
 
 /// Converts each coefficient of the polynomial to either 0 or 1 by checking whether it
@@ -62,17 +63,15 @@ pub(crate) fn round_coefficients<Zq: IntField, const N: usize>(
 ) -> Polynomial<Zq::I, N> {
     let two = Zq::I::one() + Zq::I::one();
     let q_div_4 = closest_integer_div_two(Zq::Q) / two;
-    let coeffs = p
-        .iter()
-        .map(|c| {
-            if c.abs().gt(&q_div_4) {
-                Zq::I::one()
-            } else {
-                Zq::I::zero()
-            }
-        })
-        .collect();
-    Polynomial::new(coeffs)
+    let mut p = p;
+    p.coeffs_mut(|c| {
+        *c = if c.abs().gt(&q_div_4) {
+            Zq::I::one()
+        } else {
+            Zq::I::zero()
+        };
+    });
+    p
 }
 
 /// Applies modulo q to each coefficient of the polynomial.
@@ -80,7 +79,9 @@ pub(crate) fn round_coefficients<Zq: IntField, const N: usize>(
 pub(crate) fn modulo_coefficients<Zq: IntField, const N: usize>(
     p: Polynomial<Zq::I, N>,
 ) -> Polynomial<Zq::I, N> {
-    Polynomial::new(p.iter().map(Zq::modulo).collect())
+    let mut p = p;
+    p.coeffs_mut(|c| *c = Zq::modulo(c));
+    p
 }
 
 /// Computes [x/2], the closest integer to x/2 with ties being broken upwards
