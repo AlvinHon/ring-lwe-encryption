@@ -79,6 +79,7 @@ where
 /// A pre-defined field over integers with prime modulus 3329.
 /// The parameters are chosen according to the NIST standard
 /// [FIPS203](https://csrc.nist.gov/pubs/fips/203/final).
+#[derive(Debug, Clone)]
 pub struct ZqI32;
 
 impl IntField for ZqI32 {
