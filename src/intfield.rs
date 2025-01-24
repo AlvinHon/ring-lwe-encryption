@@ -16,7 +16,17 @@ use rand::distributions::uniform::SampleUniform;
 /// [std::ops] for the type `I`. The overflow behavior is not handled in this
 /// library.
 pub trait IntField {
+    #[cfg(not(any(feature = "serde")))]
     type I: Integer + Signed + Clone + SampleUniform;
+
+    #[cfg(feature = "serde")]
+    type I: Integer
+        + Signed
+        + Clone
+        + SampleUniform
+        + serde::Serialize
+        + for<'de> serde::Deserialize<'de>;
+
     /// The prime modulus q.
     const Q: Self::I;
     /// A positive integer, defines the boundary of the range of field element. This boundary determines

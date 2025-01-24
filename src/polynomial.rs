@@ -90,6 +90,18 @@ pub(crate) fn closest_integer_div_two<I: Integer + Clone>(x: I) -> I {
     x.div_ceil(&(I::one() + I::one()))
 }
 
+/// Converts a polynomial to a vector of fixed size (N) by padding with zeros.
+#[inline]
+pub(crate) fn to_fixed_coeffs_vec<Zq: IntField, const N: usize>(
+    p: &Polynomial<Zq::I, N>,
+) -> Vec<Zq::I> {
+    let mut p_vec = p.iter().cloned().collect::<Vec<Zq::I>>();
+    if p_vec.len() < N {
+        p_vec.extend(std::iter::repeat(Zq::I::zero()).take(N - p_vec.len()));
+    }
+    p_vec
+}
+
 #[cfg(test)]
 mod tests {
 

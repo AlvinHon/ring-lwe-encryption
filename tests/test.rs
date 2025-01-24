@@ -76,3 +76,34 @@ fn test_key_gen_q16760833_n1024() {
         assert_eq!(message, m);
     }
 }
+
+#[test]
+#[cfg(feature = "serde")]
+fn test_serde() {
+    let rng = &mut rand::thread_rng();
+    let (ek, dk) = standard(rng);
+    let message = (0..256).map(|_| rng.gen_range(0..2)).collect::<Vec<i32>>();
+
+    let serialized_ek = bincode::serialize(&ek).unwrap();
+    // - bincode treats usize as u64 (8 bytes), and adds 8 bytes for the length of the vector
+    // - size of i32 = 4
+    // - 2 polynomials, each with 256 coefficients
+    // => 8 + 2*256 * 4 = 2056
+    assert_eq!(serialized_ek.len(), 2056);
+    let deserialized_ek = bincode::deserialize(&serialized_ek).unwrap();
+    assert_eq!(ek, deserialized_ek);
+
+    let serialized_dk = bincode::serialize(&dk).unwrap();
+    // DecryptKey only has one polynomial
+    // => 8 + 256 * 4 = 1032
+    assert_eq!(serialized_dk.len(), 1032);
+    let deserialized_dk = bincode::deserialize(&serialized_dk).unwrap();
+    assert_eq!(dk, deserialized_dk);
+
+    let c = ek.encrypt(rng, message.clone());
+    let serialized_c = bincode::serialize(&c).unwrap();
+    // again, ciphertext has 2 polynomials, each with 256 coefficients
+    assert_eq!(serialized_c.len(), 2056);
+    let deserialized_c = bincode::deserialize(&serialized_c).unwrap();
+    assert_eq!(c, deserialized_c);
+}
