@@ -11,7 +11,7 @@ To use this library, you will need to use integers compatible to the types that 
 For convenience, the key generation method `standard` is provided using the NIST standard parameters.
 
 ```rust
-let rng = &mut rand::thread_rng();
+let rng = &mut rand::rng();
 
 // Key generation using standard parameters
 let (ek, dk) = rlwe_encryption::standard(rng);
@@ -45,7 +45,7 @@ impl IntField for ZqI32 {
     }
 }
 
-let rng = &mut rand::thread_rng();
+let rng = &mut rand::rng();
 let (ek, dk) = key_gen::<ZqI32, 512>(rng);
 // ...
 ```
