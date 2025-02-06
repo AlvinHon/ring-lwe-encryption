@@ -5,7 +5,7 @@ use num::{
     Integer, Signed,
 };
 use poly_ring_xnp1::Polynomial;
-use rand::{distributions::uniform::SampleUniform, Rng};
+use rand::{distr::uniform::SampleUniform, Rng};
 
 use crate::IntField;
 
@@ -41,7 +41,7 @@ where
     upper.inc(); // inclusive bound
 
     let range = lower.clone()..upper.clone();
-    let coeffs = (0..N).map(|_| rng.gen_range(range.clone())).collect();
+    let coeffs = (0..N).map(|_| rng.random_range(range.clone())).collect();
 
     Polynomial::new(coeffs)
 }
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_rand_polynomial() {
-        let rng = &mut rand::thread_rng();
+        let rng = &mut rand::rng();
         let p = rand_polynomial_within::<_, i32, 512>(rng, 1);
         p.iter().for_each(|c| assert!(*c >= -1 && *c <= 1));
     }

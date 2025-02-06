@@ -16,7 +16,7 @@ path = "src/lib.rs"
 [dependencies]
 num = "0.4"
 poly-ring-xnp1 = {git="https://github.com/AlvinHon/poly-ring"}
-rand = "0.8"
+rand = "0.9"
 serde = { version="1.0.217", optional=true }
 
 [dev-dependencies]
@@ -24,7 +24,7 @@ bincode = "1.3.3"
 criterion = "0.5"
 
 [features]
-default = []
+default = ["serde"]
 serde = ["dep:serde"]
 
 [[bench]]

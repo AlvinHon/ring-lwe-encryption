@@ -1,7 +1,7 @@
 //! Defines the `IntField` trait for finite fields over integers.
 
 use num::{Integer, Signed};
-use rand::distributions::uniform::SampleUniform;
+use rand::distr::uniform::SampleUniform;
 
 /// Implements a finite field over integers with prime modulus q.
 ///

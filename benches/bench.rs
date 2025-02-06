@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use rand::Rng;
+use rand::{rng, Rng};
 
 criterion_group! {
     name = standard;
@@ -12,9 +12,11 @@ criterion_group! {
 criterion_main!(standard);
 
 fn bench_standard_encrypt(c: &mut Criterion) {
-    let rng = &mut rand::thread_rng();
+    let rng = &mut rng();
     let (ek, _) = rlwe_encryption::standard(rng);
-    let message = (0..256).map(|_| rng.gen_range(0..2)).collect::<Vec<i32>>();
+    let message = (0..256)
+        .map(|_| rng.random_range(0..2))
+        .collect::<Vec<i32>>();
 
     c.bench_function("standard_encrypt", |b| {
         b.iter_batched(
@@ -28,9 +30,11 @@ fn bench_standard_encrypt(c: &mut Criterion) {
 }
 
 fn bench_standard_decrypt(c: &mut Criterion) {
-    let rng = &mut rand::thread_rng();
+    let rng = &mut rng();
     let (ek, dk) = rlwe_encryption::standard(rng);
-    let message = (0..256).map(|_| rng.gen_range(0..2)).collect::<Vec<i32>>();
+    let message = (0..256)
+        .map(|_| rng.random_range(0..2))
+        .collect::<Vec<i32>>();
     let ciphertext = ek.encrypt(rng, message);
 
     c.bench_function("standard_decrypt", |b| {
