@@ -16,6 +16,7 @@ use crate::{
 /// where `I` is the integer type of the field `Zq`. Depending on the
 /// serialization method, the size can be slightly larger (for additional
 /// metadata).
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EncryptKey<Zq: IntField, const N: usize> {
     pub(crate) a: Polynomial<Zq::I, N>,
@@ -60,43 +61,5 @@ impl<Zq: IntField, const N: usize> EncryptKey<Zq, N> {
         };
 
         CipherText { u, v }
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<Zq: IntField, const N: usize> serde::Serialize for EncryptKey<Zq, N> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let a_vec = crate::polynomial::to_fixed_coeffs_vec::<Zq, N>(&self.a);
-        let t_vec = crate::polynomial::to_fixed_coeffs_vec::<Zq, N>(&self.t);
-
-        let mut ret = a_vec;
-        ret.extend(t_vec);
-        ret.serialize(serializer)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de, Zq: IntField, const N: usize> serde::Deserialize<'de> for EncryptKey<Zq, N> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let vec = Vec::<Zq::I>::deserialize(deserializer)?;
-        if vec.len() != 2 * N {
-            return Err(serde::de::Error::custom(format!(
-                "Invalid length of the vector: expected {}, got {}",
-                2 * N,
-                vec.len()
-            )));
-        }
-        let (a, t) = vec.split_at(N);
-
-        Ok(Self {
-            a: Polynomial::new(a.to_vec()),
-            t: Polynomial::new(t.to_vec()),
-        })
     }
 }
