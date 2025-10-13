@@ -22,7 +22,7 @@ use std::ops::{Add, Mul, Sub};
 /// The generic type `Zq` implements the [IntField] trait. Please refer to the
 /// documentation of the trait in order to make it work properly.
 ///
-/// The constant `N` defines the legnth of the polynomial, as well as the maximum
+/// The constant `N` defines the length of the polynomial, as well as the maximum
 /// length of the message that can be encrypted. It must be a power of 2.
 ///
 /// ## Example
@@ -48,7 +48,7 @@ use std::ops::{Add, Mul, Sub};
 ///     }
 /// }
 ///
-/// let rng = &mut rand::thread_rng();
+/// let rng = &mut rand::rng();
 ///
 /// let (ek, dk) = key_gen::<ZqI32, 512>(rng);
 ///
@@ -104,7 +104,7 @@ impl IntField for ZqI32 {
 /// ## Example
 ///
 /// ```rust
-/// let rng = &mut rand::thread_rng();
+/// let rng = &mut rand::rng();
 ///
 /// let (ek, dk) = rlwe_encryption::standard(rng);
 ///

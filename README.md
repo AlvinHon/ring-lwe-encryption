@@ -23,29 +23,3 @@ let ciphertext = ek.encrypt(rng, message.clone());
 let decrypted = dk.decrypt(ciphertext)[..message.len()].to_vec();
 assert_eq!(message, decrypted);
 ```
-
-It is also possible to generate the keys using custom parameters. The parameters are defined in your custom struct that implements the trait `IntField`. Then you can call `key_gen` method together with a constant `N`. Please check the rust doc for more details. One note is that the integer modulo operation is not provided in this library. You need to implement it in your custom struct.
-
-```rust ignore
-use rlwe_encryption::{key_gen, IntField};
-struct ZqI32;
-
-impl IntField for ZqI32 {
-    type I = i32;
-    const Q: i32 = 8383489; // a prime number
-    const B: i32 = 1;
-
-    fn modulo(x: &Self::I) -> Self::I {
-        let a = x.rem_euclid(Self::Q);
-        if a > Self::Q / 2 {
-            a - Self::Q
-        } else {
-            a
-        }
-    }
-}
-
-let rng = &mut rand::rng();
-let (ek, dk) = key_gen::<ZqI32, 512>(rng);
-// ...
-```
