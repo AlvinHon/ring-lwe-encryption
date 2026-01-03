@@ -13,34 +13,37 @@ use crate::IntField;
 pub(crate) fn rand_polynomial<Zq: IntField, const N: usize>(
     rng: &mut impl Rng,
 ) -> Polynomial<Zq::I, N> {
+    // Elements are in the range [-q/2, q/2 - 1]
     let bound = Zq::Q / (Zq::I::one() + Zq::I::one());
-    rand_polynomial_within(rng, bound)
+    let lower = -bound.clone();
+    let upper = bound - Zq::I::one();
+
+    rand_polynomial_within(rng, lower, upper)
 }
 
 #[inline]
 pub(crate) fn small_polynomial<Zq: IntField, const N: usize>(
     rng: &mut impl Rng,
 ) -> Polynomial<Zq::I, N> {
-    rand_polynomial_within(rng, Zq::B)
+    let lower = -Zq::B.clone();
+    let upper = Zq::B.clone();
+
+    rand_polynomial_within(rng, lower, upper)
 }
 
-/// Returns a random polynomial with coefficients in the range `[-bound, bound]`.
+/// Returns a random polynomial with coefficients in the range `[lower, upper]`.
 ///
 /// ## Safety
-/// **bound** must be positive.
+/// **upper** must be greater than or equal to **lower**.
 pub(crate) fn rand_polynomial_within<R: Rng, I, const N: usize>(
     rng: &mut R,
-    bound: I,
+    lower: I,
+    upper: I,
 ) -> Polynomial<I, N>
 where
     I: Integer + Clone + SampleUniform,
 {
-    let lower = I::zero() - bound.clone();
-
-    let mut upper = bound;
-    upper.inc(); // inclusive bound
-
-    let range = lower.clone()..upper.clone();
+    let range = lower.clone()..=upper.clone();
     let coeffs = (0..N).map(|_| rng.random_range(range.clone())).collect();
 
     Polynomial::new(coeffs)
@@ -126,7 +129,7 @@ mod tests {
     #[test]
     fn test_rand_polynomial() {
         let rng = &mut rand::rng();
-        let p = rand_polynomial_within::<_, i32, 512>(rng, 1);
+        let p = rand_polynomial_within::<_, i32, 512>(rng, -1, 1);
         p.iter().for_each(|c| assert!(*c >= -1 && *c <= 1));
     }
 
