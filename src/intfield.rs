@@ -1,6 +1,6 @@
 //! Defines the `IntField` trait for finite fields over integers.
 
-use num::{Integer, Signed};
+use num::{Integer, One, Signed};
 use rand::distr::uniform::SampleUniform;
 
 /// Implements a finite field over integers with prime modulus q.
@@ -48,4 +48,14 @@ pub trait IntField {
     /// }
     /// ```
     fn modulo(x: &Self::I) -> Self::I;
+
+    /// Checks whether the parameters Q and B are valid for encryption:
+    /// 2N * B^2 + B < Q/4
+    fn valid() -> bool {
+        let four = Self::I::one() + Self::I::one() + Self::I::one() + Self::I::one();
+        let two = Self::I::one() + Self::I::one();
+        let lhs = two * Self::B.clone() * Self::B.clone() + Self::B.clone();
+        let rhs = Self::Q.clone() / four;
+        lhs < rhs
+    }
 }

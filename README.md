@@ -16,10 +16,10 @@ let rng = &mut rand::rng();
 // Key generation using standard parameters
 let (ek, dk) = rlwe_encryption::standard(rng);
 // message is a vector of ones and zeros
-let message = vec![0, 1, 0, 1];
+let message = rlwe_encryption::Message::<_, 256>::new(vec![0, 1, 0, 1]);
 // Encrypt the message
 let ciphertext = ek.encrypt(rng, message.clone());
 // Decrypt the ciphertext and then truncate to the length of the original message.
 let decrypted = dk.decrypt(ciphertext)[..message.len()].to_vec();
-assert_eq!(message, decrypted);
+assert_eq!(message.data(), decrypted);
 ```

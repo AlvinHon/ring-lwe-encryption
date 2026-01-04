@@ -1,9 +1,9 @@
-use rand::{rng, Rng};
-use rlwe_encryption::{key_gen, standard, IntField};
+use rand::rng;
+use rlwe_encryption::{key_gen, standard, IntField, Message};
 
 macro_rules! define_zq_i64 {
     ($name:ident, $q:expr) => {
-        #[derive(Debug)]
+        #[derive(Clone, Debug)]
         struct $name;
 
         impl IntField for $name {
@@ -30,12 +30,10 @@ fn test_standard() {
     let (ek, dk) = standard(rng);
 
     for _ in 0..100 {
-        let message = (0..256)
-            .map(|_| rng.random_range(0..2))
-            .collect::<Vec<i32>>();
+        let message = Message::random(rng, 256);
         let c = ek.encrypt(rng, message.clone());
         let m = dk.decrypt(c)[..message.len()].to_vec();
-        assert_eq!(message, m);
+        assert_eq!(message.data(), m);
     }
 }
 
@@ -48,12 +46,10 @@ fn test_key_gen_q8383489_n512() {
     let (ek, dk) = key_gen::<ZqI64_8383489, 512>(rng);
 
     for _ in 0..100 {
-        let message = (0..512)
-            .map(|_| rng.random_range(0..2))
-            .collect::<Vec<i64>>();
+        let message = Message::random(rng, 512);
         let c = ek.encrypt(rng, message.clone());
         let m = dk.decrypt(c)[..message.len()].to_vec();
-        assert_eq!(message, m);
+        assert_eq!(message.data(), m);
     }
 }
 
@@ -66,12 +62,10 @@ fn test_key_gen_q16760833_n1024() {
     let (ek, dk) = key_gen::<ZqI64_16760833, 1024>(rng);
 
     for _ in 0..100 {
-        let message = (0..1024)
-            .map(|_| rng.random_range(0..2))
-            .collect::<Vec<i64>>();
+        let message = Message::random(rng, 1024);
         let c = ek.encrypt(rng, message.clone());
         let m = dk.decrypt(c)[..message.len()].to_vec();
-        assert_eq!(message, m);
+        assert_eq!(message.data(), m);
     }
 }
 
@@ -80,9 +74,7 @@ fn test_key_gen_q16760833_n1024() {
 fn test_serde() {
     let rng = &mut rng();
     let (ek, dk) = standard(rng);
-    let message = (0..256)
-        .map(|_| rng.random_range(0..2))
-        .collect::<Vec<i32>>();
+    let message = Message::random(rng, 256);
 
     let serialized_ek = bincode::serialize(&ek).unwrap();
     // - bincode treats usize as u64 (8 bytes), and adds 8 bytes for the length of the vector

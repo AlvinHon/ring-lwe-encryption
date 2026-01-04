@@ -13,10 +13,9 @@ use crate::IntField;
 pub(crate) fn rand_polynomial<Zq: IntField, const N: usize>(
     rng: &mut impl Rng,
 ) -> Polynomial<Zq::I, N> {
-    // Elements are in the range [-q/2, q/2 - 1]
-    let bound = Zq::Q / (Zq::I::one() + Zq::I::one());
-    let lower = -bound.clone();
-    let upper = bound - Zq::I::one();
+    // Elements are in the range [-q/2, q/2]
+    let upper = Zq::Q / (Zq::I::one() + Zq::I::one());
+    let lower = -upper.clone();
 
     rand_polynomial_within(rng, lower, upper)
 }

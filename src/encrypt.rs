@@ -8,6 +8,7 @@ use crate::{
     ciphertext::CipherText,
     intfield::IntField,
     polynomial::{modulo_coefficients, scale_coefficients, small_polynomial},
+    Message,
 };
 
 /// The encryption key created by the key generation method.
@@ -25,19 +26,10 @@ pub struct EncryptKey<Zq: IntField, const N: usize> {
 
 impl<Zq: IntField, const N: usize> EncryptKey<Zq, N> {
     /// Encrypts a message `m` using the public key.
-    ///
-    /// ## Safety
-    /// Message `m` must be a vector of integers in {0, 1}, i.e. binary message.
-    /// and the length of the message must be less than or equal to `N`.
-    pub fn encrypt(&self, rng: &mut impl Rng, m: Vec<Zq::I>) -> CipherText<Zq, N>
+    pub fn encrypt(&self, rng: &mut impl Rng, m: Message<Zq, N>) -> CipherText<Zq, N>
     where
         for<'a> &'a Zq::I: Add<Output = Zq::I> + Mul<Output = Zq::I> + Sub<Output = Zq::I>,
     {
-        // Uncomment for checking the preconditions. Here commented for performance.
-        // assert!(len <= N);
-        // m.iter()
-        //     .for_each(|mi| assert!(mi == &Zq::I::zero() || mi == &Zq::I::one()));
-
         let r = small_polynomial::<Zq, N>(rng);
         let e2 = small_polynomial::<Zq, N>(rng);
         let e3 = small_polynomial::<Zq, N>(rng);
@@ -49,7 +41,7 @@ impl<Zq: IntField, const N: usize> EncryptKey<Zq, N> {
         };
 
         let q_div_2_m = {
-            let tmp = Polynomial::<_, N>::from_coeffs(m);
+            let tmp = Polynomial::<_, N>::from_coeffs(m.data());
             scale_coefficients::<Zq, N>(tmp) // = [q/2] m
         };
 

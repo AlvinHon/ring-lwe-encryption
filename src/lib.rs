@@ -8,6 +8,8 @@ mod encrypt;
 pub use encrypt::EncryptKey;
 mod intfield;
 pub use intfield::IntField;
+mod message;
+pub use message::Message;
 pub(crate) mod polynomial;
 
 use polynomial::{modulo_coefficients, rand_polynomial, small_polynomial};
@@ -28,9 +30,10 @@ use std::ops::{Add, Mul, Sub};
 /// ## Example
 ///
 /// ```rust
-/// use rlwe_encryption::{key_gen, IntField};
+/// use rlwe_encryption::{key_gen, IntField, Message};
 ///
 /// // Define your own field Zq
+/// #[derive(Clone)]
 /// struct ZqI32;
 ///
 /// impl IntField for ZqI32 {
@@ -52,10 +55,10 @@ use std::ops::{Add, Mul, Sub};
 ///
 /// let (ek, dk) = key_gen::<ZqI32, 512>(rng);
 ///
-/// let message = vec![1, 0, 0, 1];
+/// let message = Message::<ZqI32, 512>::new(vec![0, 1, 0, 1]);
 /// let ciphertext = ek.encrypt(rng, message.clone());
 /// let decrypted = dk.decrypt(ciphertext)[..message.len()].to_vec();
-/// assert_eq!(message, decrypted);
+/// assert_eq!(message.data(), decrypted);
 /// ```
 pub fn key_gen<Zq: IntField, const N: usize>(
     rng: &mut impl Rng,
@@ -79,10 +82,15 @@ where
 /// A pre-defined field over integers with prime modulus 3329.
 /// The parameters are chosen according to the NIST standard
 /// [FIPS203](https://csrc.nist.gov/pubs/fips/203/final).
+///
+/// ```
+/// use crate::rlwe_encryption::IntField;
+/// assert!(rlwe_encryption::StandardZq::valid());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ZqI32;
+pub struct StandardZq;
 
-impl IntField for ZqI32 {
+impl IntField for StandardZq {
     type I = i32;
     const Q: i32 = 3329;
     const B: i32 = 1;
@@ -108,11 +116,13 @@ impl IntField for ZqI32 {
 ///
 /// let (ek, dk) = rlwe_encryption::standard(rng);
 ///
-/// let message = vec![0, 1, 0, 1];
+/// let message = rlwe_encryption::Message::<_, 256>::new(vec![0, 1, 0, 1]);
 /// let ciphertext = ek.encrypt(rng, message.clone());
 /// let decrypted = dk.decrypt(ciphertext)[..message.len()].to_vec();
-/// assert_eq!(message, decrypted);
+/// assert_eq!(message.data(), decrypted);
 /// ```
-pub fn standard(rng: &mut impl rand::Rng) -> (EncryptKey<ZqI32, 256>, DecryptKey<ZqI32, 256>) {
-    key_gen::<ZqI32, 256>(rng)
+pub fn standard(
+    rng: &mut impl rand::Rng,
+) -> (EncryptKey<StandardZq, 256>, DecryptKey<StandardZq, 256>) {
+    key_gen::<StandardZq, 256>(rng)
 }
